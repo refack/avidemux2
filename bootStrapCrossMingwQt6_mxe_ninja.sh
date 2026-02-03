@@ -3,7 +3,15 @@
 # Default config
 
 default_mxerootdir="/opt/mxe"
-mxerootdir="$default_mxerootdir"
+# If default mxe dir exists, use it, otherwise default to native
+if [ -d "$default_mxerootdir" ]; then
+    mxerootdir="$default_mxerootdir"
+    use_mxe=1
+else
+    mxerootdir=""
+    use_mxe=0
+fi
+
 rebuild=0
 ninja=1
 debug=0
@@ -16,6 +24,7 @@ external_libmad=0
 do_release_pkg=1
 author_setup=0
 BUILDER=make
+
 # Functions
 
 authorSetup() {
@@ -48,12 +57,14 @@ setupEnv() {
   fi
   export SRCTOP=$(cd $(dirname "$0") && pwd)
   export ARCH="x86_64"
-  export MXE_ROOT="$mxerootdir"
-  export MXE_TARGET=${ARCH}-w64-mingw32.shared
   export QT_SELECT=6
+
   if [ "x$author_setup" = "x1" ]; then
     authorSetup
-  else
+    use_mxe=0
+  elif [ "x$use_mxe" = "x1" ]; then
+    export MXE_ROOT="$mxerootdir"
+    export MXE_TARGET=${ARCH}-w64-mingw32.shared
     export MINGW="${MXE_ROOT}/usr/${MXE_TARGET}"
     export QT_HOME="${MINGW}/qt6"
     export QTDIR=${QT_HOME}
@@ -61,21 +72,43 @@ setupEnv() {
 #:"${MXE_ROOT}/usr/x86_64-pc-linux-gnu/qt6/bin"
     export TOOLCHAIN_LOCATION="${MXE_ROOT}"/usr
     export SDL2DIR="$MINGW"
-    echo "Using <${PATH}> as path"
-    which lrelease
-    PARAL="-j $(nproc)"
-    if [ "x$debug" != "x1" ]; then
-      export INSTALL_DIR="${MINGW}"/out/avidemux
+
+    export CROSS_PREFIX=$MXE_TARGET
+    export PKG_CONFIG_PATH="${MINGW}"/lib/pkgconfig
+    export PKG_CONFIG_LIBDIR="${MINGW}"/lib/pkgconfig
+    export CROSS_C_COMPILER=gcc
+    export CROSS_CXX_COMPILER=g++
+  else
+    # Native MinGW64 (e.g. MSYS2)
+    echo "Using Native MinGW64 mode"
+    if [ -z "$MINGW_PREFIX" ]; then
+        export MINGW="/mingw64"
+        if [ ! -d "$MINGW" ] && [ -d "/ucrt64" ]; then
+             export MINGW="/ucrt64"
+        fi
     else
-      export INSTALL_DIR="${MINGW}"/out_debug/avidemux
+        export MINGW="$MINGW_PREFIX"
     fi
+
+    export QT_HOME="${MINGW}"
+    export QTDIR=${QT_HOME}
+    export PATH="${MINGW}/bin:$PATH"
+    export SDL2DIR="$MINGW"
+    export CROSS_PREFIX=""
+    export PKG_CONFIG_PATH="${MINGW}"/lib/pkgconfig
+    # export PKG_CONFIG_LIBDIR="${MINGW}"/lib/pkgconfig
   fi
-  export CROSS_PREFIX=$MXE_TARGET
-  export PKG_CONFIG_PATH="${MINGW}"/lib/pkgconfig
-  export PKG_CONFIG_LIBDIR="${MINGW}"/lib/pkgconfig
+
+  echo "Using <${PATH}> as path"
+  which lrelease
+  PARAL="-j $(nproc)"
+  if [ "x$debug" != "x1" ]; then
+      export INSTALL_DIR="${MINGW}"/out/avidemux
+  else
+      export INSTALL_DIR="${MINGW}"/out_debug/avidemux
+  fi
+
   export CXXFLAGS="-std=c++17"
-  export CROSS_C_COMPILER=gcc
-  export CROSS_CXX_COMPILER=g++
 }
 
 fail() {
@@ -95,7 +128,9 @@ Process() {
   if [ "x$debug" = "x1" ]; then
     DEBUG="-DVERBOSE=1 -DCMAKE_BUILD_TYPE=Debug"
     BASE="${BASE}_debug"
-    GENERATOR="CodeBlocks - Unix Makefiles"
+    if [ "x$ninja" != "x1" ]; then
+       GENERATOR="CodeBlocks - Unix Makefiles"
+    fi
   fi
   BUILDDIR="${PWD}/${BASE}"
   echo "Building in \"${BUILDDIR}\" from \"${SOURCEDIR}\" with EXTRA=<${EXTRA}>)"
@@ -106,21 +141,31 @@ Process() {
     mkdir "$BUILDDIR" || fail "creating build directory"
   fi
   pushd "$BUILDDIR" >/dev/null
-  cmake -DCROSS="$MINGW" \
+
+  CMAKE_OPTS="-DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+    -DAVIDEMUX_TOP_SOURCE_DIR=$SRCTOP \
+    $DEBUG \
+    -G $GENERATOR \
+    $EXTRA"
+
+  if [ "x$use_mxe" = "x1" ]; then
+    CMAKE_OPTS="$CMAKE_OPTS \
+    -DCROSS=$MINGW \
     -DCMAKE_SYSTEM_NAME:STRING=Windows \
-    -DCMAKE_FIND_ROOT_PATH="$MINGW" \
-    -DTOOLCHAIN_LOCATION="$TOOLCHAIN_LOCATION" \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
-    -DCMAKE_C_COMPILER:STRING="${CROSS_PREFIX}-${CROSS_C_COMPILER}" \
-    -DCMAKE_CXX_COMPILER:STRING="${CROSS_PREFIX}-${CROSS_CXX_COMPILER}" \
-    -DCMAKE_LINKER:STRING="${CROSS_PREFIX}-ld" \
-    -DCMAKE_AR:STRING="${CROSS_PREFIX}-ar" \
-    -DCMAKE_RC_COMPILER:STRING="${CROSS_PREFIX}-windres" \
-    -DAVIDEMUX_TOP_SOURCE_DIR:STRING="$SRCTOP" \
-    ${DEBUG} \
-    -G "${GENERATOR}" \
-    $EXTRA \
-    "$SOURCEDIR" || fail "cmake"
+    -DCMAKE_FIND_ROOT_PATH=$MINGW \
+    -DTOOLCHAIN_LOCATION=$TOOLCHAIN_LOCATION \
+    -DCMAKE_C_COMPILER=${CROSS_PREFIX}-${CROSS_C_COMPILER} \
+    -DCMAKE_CXX_COMPILER=${CROSS_PREFIX}-${CROSS_CXX_COMPILER} \
+    -DCMAKE_LINKER=${CROSS_PREFIX}-ld \
+    -DCMAKE_AR=${CROSS_PREFIX}-ar \
+    -DCMAKE_RC_COMPILER=${CROSS_PREFIX}-windres"
+  else
+    # Native MinGW
+    # We need to define CROSS so that avidemux picks up MinGW cmake files instead of VS
+    CMAKE_OPTS="$CMAKE_OPTS -DCROSS=$MINGW -DCMAKE_CROSS_PREFIX="
+  fi
+
+  cmake $CMAKE_OPTS "$SOURCEDIR" || fail "cmake"
   $BUILDER $PARAL >&/tmp/log$BASE || fail "make, result in /tmp/log$BASE"
   $BUILDER install || fail "install"
   # Only install  component=dev for dev package
@@ -206,13 +251,27 @@ create_release_package() {
   if [ ! -e "${TARGETDIR}"/styles ]; then
     mkdir "${TARGETDIR}"/styles || fail "creating styles directory"
   fi
-  cd "${MINGW}"/bin
+
+  # For DLL copying, if MINGW is /mingw64 (native), we should copy from there.
+  # The list of DLLs might vary.
+
+  if [ "x$use_mxe" = "x1" ]; then
+      BIN_DIR="${MINGW}/bin"
+  else
+      BIN_DIR="${MINGW}/bin"
+  fi
+
+  cd "$BIN_DIR"
   if [ "x${external_liba52}" = "x1" ]; then
     cp -v liba52-*.dll "$TARGETDIR"
   fi
   if [ "x${external_libmad}" = "x1" ]; then
     cp -v libmad-*.dll "$TARGETDIR"
   fi
+
+  # List of DLLs to copy. Attempt to copy them.
+  # In native builds, some might differ in name or presence.
+
   cp -v \
     libaom.dll \
     libass-*.dll \
@@ -263,25 +322,64 @@ create_release_package() {
     cp -v libsqlite3-*.dll "$TARGETDIR"
   else
     echo "Warning: no libsqlite3 DLL in default location, trying alternate."
-    cd "${MINGW}"/lib
-    cp -v libsqlite3*.dll "$TARGETDIR"
+    if [ -d "${MINGW}/lib" ]; then
+        cd "${MINGW}"/lib
+        cp -v libsqlite3*.dll "$TARGETDIR"
+    fi
   fi
-  cd "$QT_HOME"
-  cp -v \
-    bin/Qt6Core.dll \
-    bin/Qt6Gui.dll \
-    bin/Qt6Network.dll \
-    bin/Qt6OpenGL.dll \
-    bin/Qt6OpenGLWidgets.dll \
-    bin/Qt6Widgets.dll \
-    "$TARGETDIR"
-  cp -v \
-    plugins/platforms/qminimal.dll \
-    plugins/platforms/qwindows.dll \
-    "${TARGETDIR}"/platforms/
-  cp -v \
-    plugins/styles/qmodernwindowsstyle.dll \
-    "${TARGETDIR}"/styles/
+
+  if [ "x$use_mxe" = "x1" ]; then
+      cd "$QT_HOME"
+      cp -v \
+        bin/Qt6Core.dll \
+        bin/Qt6Gui.dll \
+        bin/Qt6Network.dll \
+        bin/Qt6OpenGL.dll \
+        bin/Qt6OpenGLWidgets.dll \
+        bin/Qt6Widgets.dll \
+        "$TARGETDIR"
+  else
+      # Native Qt6, libraries are in bin usually
+      cd "${MINGW}/bin"
+      cp -v \
+        Qt6Core.dll \
+        Qt6Gui.dll \
+        Qt6Network.dll \
+        Qt6OpenGL.dll \
+        Qt6OpenGLWidgets.dll \
+        Qt6Widgets.dll \
+        "$TARGETDIR"
+  fi
+
+  if [ "x$use_mxe" = "x1" ]; then
+      cd "$QT_HOME"
+      cp -v \
+        plugins/platforms/qminimal.dll \
+        plugins/platforms/qwindows.dll \
+        "${TARGETDIR}"/platforms/
+      cp -v \
+        plugins/styles/qmodernwindowsstyle.dll \
+        "${TARGETDIR}"/styles/
+  else
+      # Native, plugins are in share/qt6/plugins or lib/qt6/plugins?
+      # In MSYS2: /mingw64/share/qt6/plugins
+      PLUGINS_DIR="${MINGW}/share/qt6/plugins"
+      if [ ! -d "$PLUGINS_DIR" ]; then
+           PLUGINS_DIR="${MINGW}/plugins"
+      fi
+
+      if [ -d "$PLUGINS_DIR" ]; then
+        cd "$PLUGINS_DIR"
+        cp -v \
+            platforms/qminimal.dll \
+            platforms/qwindows.dll \
+            "${TARGETDIR}"/platforms/
+        cp -v \
+            styles/qmodernwindowsstyle.dll \
+            "${TARGETDIR}"/styles/
+      fi
+  fi
+
   mkdir "${TARGETDIR}"/etc || fail "creating etc directory"
   cp -rvL "${MINGW}"/etc/fonts "${TARGETDIR}"/etc
   cd "$TARGETDIR"
@@ -311,6 +409,7 @@ while [ $# != 0 ]; do
     ;;
   --mxe-root=*)
     mxerootdir=$(dir_check $(option_name "$config_option") $(option_value "$config_option")) || exit 1
+    use_mxe=1
     ;;
   --debug)
     debug=1
