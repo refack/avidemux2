@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.3)
 INCLUDE(ve_plugin)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
 
