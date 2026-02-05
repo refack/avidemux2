@@ -35,13 +35,12 @@ ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64 -D_LARGE_FILES)
 INCLUDE(admConfigSummary)
 INITIALISE_SUMMARY_LISTS()
 
+INCLUDE(admCheckOptionalLibs)
 INCLUDE(admMainChecks)
-INCLUDE(admCheckFtello)
 INCLUDE(admAsNeeded)
 INCLUDE(admCheckVDPAU)
 INCLUDE(admCheckLibVA)
 INCLUDE(admCheckVideoToolbox)
-INCLUDE(admCheckSqlLite)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Debug Summary
@@ -178,12 +177,6 @@ INSTALL(FILES ${CMAKE_BINARY_DIR}/config/ADM_coreConfig.h DESTINATION "${AVIDEMU
 INSTALL(FILES ${CMAKE_BINARY_DIR}/config/ADM_coreConfig.cmake DESTINATION "${AVIDEMUX_INSTALL_INCLUDE_DIR}/avidemux/${AVIDEMUX_MAJOR_MINOR}/cmake/" COMPONENT dev)
 
 IF(MSVC)
-  SET(FOREIGN_MSVC ${CMAKE_SOURCE_DIR}/../foreignBuilds/msvc/include/)
-  INSTALL(FILES
-    ${FOREIGN_MSVC}/stdint.h
-    ${FOREIGN_MSVC}/inttypes.h
-    ${FOREIGN_MSVC}/GL/glext.h
-  DESTINATION "${AVIDEMUX_INSTALL_INCLUDE_DIR}/avidemux/${AVIDEMUX_MAJOR_MINOR}/GL" COMPONENT dev)
   # install runtimes also
   SET(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ${AVIDEMUX_BIN_DIR})
   INCLUDE(InstallRequiredSystemLibraries)

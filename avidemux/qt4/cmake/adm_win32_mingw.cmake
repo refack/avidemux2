@@ -18,7 +18,10 @@ ENDMACRO()
 #
 MACRO(ADM_POSTBUILD)
   ADM_INSTALL_BIN(avidemux3_${QT_EXTENSION})
-  INCLUDE(FindBourne)
+  find_program(BASH_EXECUTABLE NAMES bash sh)
+  if(NOT BASH_EXECUTABLE)
+     message(FATAL_ERROR "Bourne shell not found")
+  endif()
   IF(RELEASE)
     CONFIGURE_FILE(
                                 ${CMAKE_CURRENT_SOURCE_DIR}/../winInstaller/ChangeLog.release

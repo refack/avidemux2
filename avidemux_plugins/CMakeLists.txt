@@ -320,7 +320,7 @@ DISPLAY_SUMMARY_LIST()
 MACRO(ADD_DUMMY condt flder)
   IF(${${condt}})  # # Do a dummy install in case there is nothing...
     MESSAGE(STATUS "Adding dummy install file (${condt}:${${condt}})")
-    INSTALL(FILES cmake/FindAlsa.cmake
+    INSTALL(FILES cmake/admDummy.cmake
     DESTINATION ${AVIDEMUX_INSTALL_INCLUDE_DIR}/avidemux/${AVIDEMUX_MAJOR_MINOR}/dummy_${flder}
     COMPONENT runtime
   )
