@@ -6,7 +6,8 @@ MACRO(DEFINE_VID_ENCODER codec)
   SET(outName ADM_ve_${family}${codec})
   SET(${family}${codec}_SRCS
         ffQsvAV1Plugin.cpp
-        ADM_ffQsvAV1.cpp)
+        ADM_ffQsvAV1.cpp
+        ffQsvAV1_json.cpp)
   ADD_VIDEO_ENCODER(${outName} ${${family}${codec}_SRCS})
   INSTALL_VIDEO_ENCODER(${outName})
   TARGET_LINK_LIBRARIES(${outName} PRIVATE ADM_libavcodec ADM_libavutil)
