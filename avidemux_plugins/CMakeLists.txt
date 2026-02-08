@@ -333,6 +333,5 @@ ADD_DUMMY(DO_GTK gtk)
 ADD_DUMMY(DO_QT4 qt4)
 ADD_DUMMY(DO_SETTING settings)
 #
-INCLUDE(admPackager)
-admPackager(pluginsPackage)
+INCLUDE(admPluginsPackaging)
 MESSAGE("")
