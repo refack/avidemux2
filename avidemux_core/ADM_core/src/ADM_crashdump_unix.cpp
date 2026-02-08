@@ -102,8 +102,6 @@ static void addr2sym(void* pc, char* buffer, int size)
 {
 	Dl_info info;
 	Sym* sym = (Sym*)0;
-	static size_t dsize = maxSize - 1;
-	static char demangled[maxSize];
 	int dstatus = 0;
 
 	if (dladdr1(pc, &info, (void**)&sym, RTLD_DL_SYMENT) == 0)
@@ -114,12 +112,13 @@ static void addr2sym(void* pc, char* buffer, int size)
 	if ((info.dli_fname != NULL && info.dli_sname != NULL) &&
 	    (((uintptr_t)pc - (uintptr_t)info.dli_saddr) < sym->st_size))
 	{
-		__cxxabiv1::__cxa_demangle(info.dli_sname,demangled,&dsize,&dstatus);
+		char *demangled = __cxxabiv1::__cxa_demangle(info.dli_sname, NULL, NULL, &dstatus);
 		snprintf(buffer, size, "%s'%s+0x%x [0x%p]",
 				 info.dli_fname,
-				 demangled,
+				 (dstatus == 0) ? demangled : info.dli_sname,
 				 (unsigned long)pc - (unsigned long)info.dli_saddr,
 				 pc);
+		if(demangled) free(demangled);
 	}
 	else
 	{
@@ -188,9 +187,9 @@ void ADM_backTrack(const char *info,int lineno,const char *file)
 		mysaveFunction();
 #define MAX_BACKTRACK 30
 #if !defined(__HAIKU__) && !defined(__sun__)
-    char wholeStuff[2048];
-    char buffer[4096];
-    char in[2048];
+    char wholeStuff[8192];
+    char buffer[1024];
+    char in[1024];
 	void *stack[MAX_BACKTRACK+1];
 	char **functions;
 	int count, i;
@@ -200,28 +199,39 @@ void ADM_backTrack(const char *info,int lineno,const char *file)
 
 	count = backtrace(stack, MAX_BACKTRACK);
 	functions = backtrace_symbols(stack, count);
-	sprintf(wholeStuff,"%s\n at line %d, file %s\n",info,lineno,file);
+	snprintf(wholeStuff,sizeof(wholeStuff),"%s\n at line %d, file %s\n",info,lineno,file);
         int status;
-        size_t size=2047;
     // it looks like that xxxx (functionName+0x***) XXXX
 	for (i=0; i < count; i++)
 	{
             char *s=strstr(functions[i],"(");
             buffer[0]=0;
+            status = -1;
             if(s && strstr(s+1,"+"))
             {
-                strcpy(in,s+1);
-                char *e=strstr(in,"+");
-                *e=0;
-                __cxxabiv1::__cxa_demangle(in,buffer,&size,&status);
-                if(status) 
-                    strcpy(buffer,in);
+                const char *start = s + 1;
+                const char *end = strstr(start, "+");
+                size_t len = end - start;
+                if(len >= sizeof(in)) len = sizeof(in) - 1;
+                memcpy(in, start, len);
+                in[len] = 0;
+                char *demangled = __cxxabiv1::__cxa_demangle(in, NULL, NULL, &status);
+                if(status == 0)
+                    snprintf(buffer, sizeof(buffer), "%s", demangled);
+                else
+                    snprintf(buffer, sizeof(buffer), "%s", in);
+                if(demangled) free(demangled);
             }else
-                strcpy(buffer,functions[i]);
+                snprintf(buffer, sizeof(buffer), "%s", functions[i]);
             printf("%s:%d:<%s>:%d\n",functions[i],i,buffer,status);
-            strcat(wholeStuff,buffer);
-            strcat(wholeStuff,"\n");
+            size_t curLen = strlen(wholeStuff);
+            if (curLen + strlen(buffer) + 2 < sizeof(wholeStuff))
+            {
+                strcat(wholeStuff,buffer);
+                strcat(wholeStuff,"\n");
+            }
         }
+        if(functions) free(functions);
 	printf("*********** BACKTRACK **************\n");
 
 	if(myFatalFunction)
