@@ -36,6 +36,7 @@ allATypes["string"]  ="ADM_param_stdstring  "
 allATypes["filename"]="ADM_param_stdstring  "
 
 fullPath=""
+fullPath2=""
 nested=list()
 gotName=False
 def usage():
@@ -132,61 +133,52 @@ if(not os.path.isfile(inputFile)):
     exit(1)
 jsonFileName=re.sub(r'.conf',r'_pref.h',inputFile)
 listFileName=str("../include/")+re.sub(r'.conf',r'_list.h',inputFile)
-print("Generating "+jsonFileName)
-jsonFile=open(jsonFileName,'w')
-print("Generating "+listFileName)
-listFile=open(listFileName,'w')
-#
-f=open(inputFile,'r')
-while(1):
-    line=f.readline()
-    #print line
-    if(len(line)==0):
-        print("Reached end of file")
-        break # eof
-    line=re.sub(r'#.*$',r'',line).strip()
-    #print(">"+str(line)+":"+str(len(line)))
-    if(len(line)==0):
-        #print "skip"
-        continue # comment
-    # Remove #....
-    if(line.find(r'{')!=-1):
-        #
-        structs=re.sub(r'{.*$',r'',line).strip()
-        if(len(nested)==0 and gotName==False): # first one = struct Name
-            structName=structs
-            print("Our structure is :"+str(structName))
-            writeJsonHead()
-            gotName=True
-        else:  # else we have structure inside structure
-            #outputHeader("struct "+structs+" {")
-            nested.append(structs)
+
+with open(jsonFileName, 'w') as jsonFile, open(listFileName, 'w') as listFile, open(inputFile, 'r') as f:
+    print("Generating "+jsonFileName)
+    print("Generating "+listFileName)
+    for line in f:
+        line=re.sub(r'#.*$',r'',line).strip()
+        #print(">"+str(line)+":"+str(len(line)))
+        if(len(line)==0):
+            #print "skip"
+            continue # comment
+        # Remove #....
+        if(line.find(r'{')!=-1):
+            #
+            structs=re.sub(r'{.*$',r'',line).strip()
+            if(len(nested)==0 and gotName==False): # first one = struct Name
+                structName=structs
+                print("Our structure is :"+str(structName))
+                writeJsonHead()
+                gotName=True
+            else:  # else we have structure inside structure
+                #outputHeader("struct "+structs+" {")
+                nested.append(structs)
+                fullPath=".".join(nested)
+                fullPath2=".".join(nested)
+        elif(line.find(r'}')!=-1):
+            if(len(nested)!=0):
+                last=nested.pop()
+                #outputHeader("};")
             fullPath=".".join(nested)
             fullPath2=".".join(nested)
-    elif(line.find(r'}')!=-1):
-        if(len(nested)!=0):
-            last=nested.pop()
-            #outputHeader("};")
-        fullPath=".".join(nested)
-        fullPath2=".".join(nested)
-    elif(line.find(':')!=-1): # varname : type,val,min,max
-        if(gotName==False):
-            print("No structure name !")
+        elif(line.find(':')!=-1): # varname : type,val,min,max
+            if(gotName==False):
+                print("No structure name !")
+                exit(1)
+            line=re.sub(r'#.*$',r'',line)
+            line=re.sub(r'//.*$',r'',line)
+            # split by :
+            (varType,leftOver)=line.split(r':')
+            params=leftOver.split(r',')
+            for i in range(0,len(params)):
+                    params[i]=params[i].strip()
+                    #print "\t"+params[i]+"\n"
+            makeStructure(varType,params)
+        else:
+            print("Invalid line "+str(line))
             exit(1)
-        line=re.sub(r'#.*$',r'',line)
-        line=re.sub(r'//.*$',r'',line)
-        # split by :
-        (varType,leftOver)=line.split(r':')
-        params=leftOver.split(r',')
-        for i in range(0,len(params)):
-                params[i]=params[i].strip()
-                #print "\t"+params[i]+"\n"
-        makeStructure(varType,params)
-    else:
-        print("Invalid line "+str(line))
-        exit(1)
-f.close()
-writeJsonFooter()
-jsonFile.close()
-listFile.close()
+    print("Reached end of file")
+    writeJsonFooter()
 print("All done")
