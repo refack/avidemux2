@@ -295,16 +295,41 @@ Reads the bytes neccessary to complete the current packet payload.
 unsigned int 
 DTSStream::ReadPacketPayload(uint8_t *dst, unsigned int to_read)
 {
+	if (MuxCompleted())
+	{
+		return 0;
+	}
+
 	clockticks   decode_time;
-    // TODO: BUG BUG BUG: if there is a change in format in the stream
-    // this framesize will be invalid!  It only *looks* like it works...
-    // really each AU should store its own framesize...
-    unsigned int frames = to_read / framesize;
+    unsigned int bytes_to_read = 0;
+    unsigned int space_left = to_read - 4;
+
+    // We try to fit as many whole AUs as possible.
+    // Each AU already stores its own length.
+    unsigned int current_au_len = au_unsent;
+    int lookahead_idx = 0;
+    while (current_au_len > 0 && current_au_len <= space_left) {
+        bytes_to_read += current_au_len;
+        space_left -= current_au_len;
+        AUnit *next = Lookahead(lookahead_idx++);
+        if (next == NULL) break;
+        current_au_len = next->length;
+    }
+
+    // If we couldn't even fit one whole AU, we must read a partial AU
+    // to make progress, especially if the AU is larger than the packet.
+    if (bytes_to_read == 0 && au_unsent > 0) {
+        bytes_to_read = space_left;
+    }
+
     bitcount_t read_start = bs.GetBytePos();
-    unsigned int bytes_read =  bs.GetBytes( dst + 4, framesize * frames);
+    unsigned int bytes_read =  bs.GetBytes( dst + 4, bytes_to_read);
     unsigned int bytes_muxed = bytes_read;
 
-    assert( bytes_read > 0 );   // Should never try to read nothing
+    if (bytes_read == 0)
+    {
+        return 0;
+    }
 
     bs.Flush( read_start );
 
@@ -313,13 +338,11 @@ DTSStream::ReadPacketPayload(uint8_t *dst, unsigned int to_read)
         ? 0 
         : au_unsent;
 
-    // BUG BUG BUG: how do we set the 1st header pointer if we have
-    // the *middle* part of a large frame?
     assert( first_header+2 <= to_read );
 
     unsigned int syncwords = 0;
   
-	if (bytes_muxed == 0 || MuxCompleted() )
+	if (bytes_muxed == 0)
     {
 		goto completion;
     }
@@ -380,9 +403,15 @@ completion:
     // Note the index counts from the low byte of the offset so
     // the smallest value is 1!
     dst[0] = DTS_SUB_STR_0 + stream_num;
-    dst[1] = frames;
-    dst[2] = (first_header+1)>>8;
-    dst[3] = (first_header+1)&0xff;
+    dst[1] = syncwords;
+    // If no syncword starts in this packet, the pointer should be 0.
+    if (syncwords > 0) {
+        dst[2] = (first_header + 1) >> 8;
+        dst[3] = (first_header + 1) & 0xff;
+    } else {
+        dst[2] = 0;
+        dst[3] = 0;
+    }
 
 	return bytes_read + 4;
 }
