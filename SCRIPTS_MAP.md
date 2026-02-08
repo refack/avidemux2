@@ -8,9 +8,6 @@ This document lists the shell scripts found in the repository, categorized by th
 *   `bootStrapMSVC.bat`: Legacy batch file for building with MSVC (CMD).
 *   `createDebFromSourceUbuntu.bash`: Script to create Debian packages.
 *   `createRpmFromSourceFedora.bash`: Script to create RPM packages.
-*   `makeAppImage.sh`, `makeAppImage*.sh`: Scripts for creating AppImages.
-*   `run_avidemux_template_qt*.sh`, `run_jobs_template_qt*.sh`: Template scripts for running Avidemux.
-*   `update_license.sh`: Utility to update license headers.
 
 ## bootStrap/ (Refactored Build Scripts)
 
@@ -22,13 +19,20 @@ This document lists the shell scripts found in the repository, categorized by th
 *   `win_msvc.sh`: Windows MSVC (Ninja) build script.
 *   `checkCaseSensitivity.sh`: Utility to check file system case sensitivity.
 
-## addons/
-
-*   `ts_to_mkv.bash`: Helper script for TS to MKV conversion.
-
 ## appImage/
 
 *   `check.sh`, `deploy.sh`, `deploy*.sh`: Scripts related to AppImage deployment and verification.
+*   `makeAppImage.sh`, `makeAppImage*.sh`: Scripts for creating AppImages (moved from root).
+
+## scripts/
+
+*   `automkv.py`: Auto MKV script.
+*   `update_license.sh`: Utility to update license headers (moved from root).
+*   `run_templates/`: Directory containing runtime template scripts (`run_avidemux_template_qt*.sh`, `run_jobs_template_qt*.sh`).
+
+## addons/
+
+*   `ts_to_mkv.bash`: Helper script for TS to MKV conversion.
 
 ## autononreg/
 
