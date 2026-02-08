@@ -8,7 +8,10 @@ MACRO(xadd opt)
 ENDMACRO()
 INCLUDE(admFFmpegVersion)
 OPTION(FF_INHERIT_BUILD_ENV "" ON)
-FIND_PACKAGE(Patch)
+
+find_package(Patch REQUIRED)
+set(PATCH_EXECUTABLE ${Patch_EXECUTABLE})
+include(admPatchUtils)
 
 SET(FFMPEG_ROOT_DIR "${AVIDEMUX_CORE_SOURCE_DIR}/ffmpeg_package")
 SET(FFMPEG_PATCH_DIR  "${FFMPEG_ROOT_DIR}/patches/")
@@ -288,8 +291,14 @@ ENDMACRO()
 #
 MACRO(ADM_FF_BUILD_UNIX_STYLE)
 
-  find_package(Bourne)
-  find_package(GnuMake)
+  find_program(BASH_EXECUTABLE NAMES bash sh)
+  if(NOT BASH_EXECUTABLE)
+     message(FATAL_ERROR "Bourne shell not found")
+  endif()
+  find_program(GNUMAKE_EXECUTABLE NAMES gmake make)
+  if(NOT GNUMAKE_EXECUTABLE)
+     message(FATAL_ERROR "GNU Make not found")
+  endif()
 
   MESSAGE(STATUS "Configuring FFmpeg")
   SET(LAST_FFMPEG_FLAGS "${FFMPEG_FLAGS}" CACHE STRING "" FORCE)
