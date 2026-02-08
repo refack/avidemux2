@@ -1,9 +1,10 @@
 #!/bin/bash
+# Bootstrapper for MinGW/MXE
 
-# Default config
+source "$(dirname "$0")/common.sh"
 
+# Defaults
 default_mxerootdir="/opt/mxe"
-# If default mxe dir exists, use it, otherwise default to native
 if [ -d "$default_mxerootdir" ]; then
     mxerootdir="$default_mxerootdir"
     use_mxe=1
@@ -13,7 +14,7 @@ else
 fi
 
 rebuild=0
-ninja=1
+do_ninja=1
 debug=0
 do_core=1
 do_qt=1
@@ -23,9 +24,99 @@ external_liba52=0
 external_libmad=0
 do_release_pkg=1
 author_setup=0
-BUILDER=make
+qt_ver=6
 
-# Functions
+usage() {
+  echo "Bootstrap Avidemux (MinGW/MXE):"
+  echo "***********************"
+  echo "  --help                 : Print usage"
+  echo "  --debug                : Switch debugging on"
+  echo "  --mxe-root=DIR         : Use MXE installed in DIR (default: ${default_mxerootdir})"
+  echo "  --rebuild              : Preserve existing build directories"
+  echo "  --with-core            : Build core (default)"
+  echo "  --without-core         : Don't build core"
+  echo "  --with-cli             : Build cli (default)"
+  echo "  --without-cli          : Don't build cli application and plugins"
+  echo "  --with-ninja           : Build with ninja (default)"
+  echo "  --with-make            : Build with make"
+  echo "  --with-qt              : Build Qt (default)"
+  echo "  --without-qt           : Don't build Qt application and plugins"
+  echo "  --with-plugins         : Build plugins (default)"
+  echo "  --without-plugins      : Don't build plugins"
+  echo "  --with-system-liba52   : Use the system liba52 (a52dec) instead of the bundled one"
+  echo "  --with-system-libmad   : Use the system libmad instead of the bundled one"
+  echo "  --nopkg                : Don't create a ZIP archive with all required libraries"
+  echo "  -a, --author           : Match the env setup used by the Author, implies --nopkg"
+}
+
+while [ $# != 0 ]; do
+  config_option="$1"
+  case "$config_option" in
+  -h | --help)
+    usage
+    exit 1
+    ;;
+  -a | --author)
+    export author_setup=1
+    do_release_pkg=0
+    ;;
+  --mxe-root=*)
+    mxerootdir=$(dir_check $(option_name "$config_option") $(option_value "$config_option")) || exit 1
+    use_mxe=1
+    ;;
+  --debug)
+    debug=1
+    ;;
+  --rebuild)
+    rebuild=1
+    ;;
+  --without-qt)
+    do_qt=0
+    ;;
+  --without-cli)
+    do_cli=0
+    ;;
+  --without-plugins)
+    do_plugins=0
+    ;;
+  --without-core)
+    do_core=0
+    ;;
+  --with-qt)
+    do_qt=1
+    ;;
+  --with-cli)
+    do_cli=1
+    ;;
+  --with-plugins)
+    do_plugins=1
+    ;;
+  --with-ninja)
+    do_ninja=1
+    ;;
+  --with-make)
+    do_ninja=0
+    ;;
+  --with-core)
+    do_core=1
+    ;;
+  --with-system-liba52)
+    export external_liba52=1
+    ;;
+  --with-system-libmad)
+    export external_libmad=1
+    ;;
+  --nopkg)
+    do_release_pkg=0
+    ;;
+  *)
+    echo "unknown parameter $config_option"
+    usage
+    exit 1
+    ;;
+  esac
+  shift
+done
 
 authorSetup() {
   export SDLDIR=/mingw
@@ -55,7 +146,7 @@ setupEnv() {
     echo "This is unsupported by FFmpeg configure."
     fail "build prerequisites"
   fi
-  export SRCTOP=$(cd $(dirname "$0") && pwd)
+  export SRCTOP=$(cd $(dirname "$0")/.. && pwd)
   export ARCH="x86_64"
   export QT_SELECT=6
 
@@ -69,7 +160,6 @@ setupEnv() {
     export QT_HOME="${MINGW}/qt6"
     export QTDIR=${QT_HOME}
     export PATH="$PATH":"${MXE_ROOT}/usr/bin":"${QT_HOME}/bin"
-#:"${MXE_ROOT}/usr/x86_64-pc-linux-gnu/qt6/bin"
     export TOOLCHAIN_LOCATION="${MXE_ROOT}"/usr
     export SDL2DIR="$MINGW"
 
@@ -78,6 +168,18 @@ setupEnv() {
     export PKG_CONFIG_LIBDIR="${MINGW}"/lib/pkgconfig
     export CROSS_C_COMPILER=gcc
     export CROSS_CXX_COMPILER=g++
+
+    # Flags for common.sh Process
+    export COMPILER="-DCROSS=$MINGW \
+    -DCMAKE_SYSTEM_NAME:STRING=Windows \
+    -DCMAKE_FIND_ROOT_PATH=$MINGW \
+    -DTOOLCHAIN_LOCATION=$TOOLCHAIN_LOCATION \
+    -DCMAKE_C_COMPILER=${CROSS_PREFIX}-${CROSS_C_COMPILER} \
+    -DCMAKE_CXX_COMPILER=${CROSS_PREFIX}-${CROSS_CXX_COMPILER} \
+    -DCMAKE_LINKER=${CROSS_PREFIX}-ld \
+    -DCMAKE_AR=${CROSS_PREFIX}-ar \
+    -DCMAKE_RC_COMPILER=${CROSS_PREFIX}-windres"
+
   else
     # Native MinGW64 (e.g. MSYS2)
     echo "Using Native MinGW64 mode"
@@ -96,134 +198,26 @@ setupEnv() {
     export SDL2DIR="$MINGW"
     export CROSS_PREFIX=""
     export PKG_CONFIG_PATH="${MINGW}"/lib/pkgconfig
-    # export PKG_CONFIG_LIBDIR="${MINGW}"/lib/pkgconfig
+
+    # We need to define CROSS so that avidemux picks up MinGW cmake files instead of VS
+    export COMPILER="-DCROSS=$MINGW -DCMAKE_CROSS_PREFIX="
   fi
 
   echo "Using <${PATH}> as path"
-  which lrelease
-  PARAL="-j $(nproc)"
+  which lrelease 2>/dev/null
+
   if [ "x$debug" != "x1" ]; then
       export INSTALL_DIR="${MINGW}"/out/avidemux
   else
       export INSTALL_DIR="${MINGW}"/out_debug/avidemux
   fi
+  # We use install_prefix variable for common.sh
+  export install_prefix="$INSTALL_DIR"
 
   export CXXFLAGS="-std=c++17"
-}
 
-fail() {
-  echo "** Failed at $1 **"
-  exit 1
-}
-
-Process() {
-  BASE=$1
-  SOURCEDIR=$2
-  EXTRA=$3
-  GENERATOR="Unix Makefiles"
-  if [ "x$ninja" = "x1" ]; then
-    GENERATOR="Ninja"
-    BUILDER=ninja
-  fi
-  if [ "x$debug" = "x1" ]; then
-    DEBUG="-DVERBOSE=1 -DCMAKE_BUILD_TYPE=Debug"
-    BASE="${BASE}_debug"
-    if [ "x$ninja" != "x1" ]; then
-       GENERATOR="CodeBlocks - Unix Makefiles"
-    fi
-  fi
-  BUILDDIR="${PWD}/${BASE}"
-  echo "Building in \"${BUILDDIR}\" from \"${SOURCEDIR}\" with EXTRA=<${EXTRA}>)"
-  if [ "x$rebuild" != "x1" ]; then
-    rm -Rf "$BUILDDIR"
-  fi
-  if [ ! -e "$BUILDDIR" ]; then
-    mkdir "$BUILDDIR" || fail "creating build directory"
-  fi
-  pushd "$BUILDDIR" >/dev/null
-
-  CMAKE_OPTS="-DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-    -DAVIDEMUX_TOP_SOURCE_DIR=$SRCTOP \
-    $DEBUG \
-    -G $GENERATOR \
-    $EXTRA"
-
-  if [ "x$use_mxe" = "x1" ]; then
-    CMAKE_OPTS="$CMAKE_OPTS \
-    -DCROSS=$MINGW \
-    -DCMAKE_SYSTEM_NAME:STRING=Windows \
-    -DCMAKE_FIND_ROOT_PATH=$MINGW \
-    -DTOOLCHAIN_LOCATION=$TOOLCHAIN_LOCATION \
-    -DCMAKE_C_COMPILER=${CROSS_PREFIX}-${CROSS_C_COMPILER} \
-    -DCMAKE_CXX_COMPILER=${CROSS_PREFIX}-${CROSS_CXX_COMPILER} \
-    -DCMAKE_LINKER=${CROSS_PREFIX}-ld \
-    -DCMAKE_AR=${CROSS_PREFIX}-ar \
-    -DCMAKE_RC_COMPILER=${CROSS_PREFIX}-windres"
-  else
-    # Native MinGW
-    # We need to define CROSS so that avidemux picks up MinGW cmake files instead of VS
-    CMAKE_OPTS="$CMAKE_OPTS -DCROSS=$MINGW -DCMAKE_CROSS_PREFIX="
-  fi
-
-  cmake $CMAKE_OPTS "$SOURCEDIR" || fail "cmake"
-  $BUILDER $PARAL >&/tmp/log$BASE || fail "make, result in /tmp/log$BASE"
-  $BUILDER install || fail "install"
-  # Only install  component=dev for dev package
-  if [ "x$author_setup" = "x1" ]; then
-    DESTDIR=${MINGWDEV} cmake -DCOMPONENT=dev -P cmake_install.cmake || fail make_install_dev
-  fi
-  popd >/dev/null
-}
-
-usage() {
-  echo "Usage: bash $0 [OPTION]"
-  echo "  --help                 : Print usage"
-  echo "  --debug                : Switch debugging on"
-  echo "  --mxe-root=DIR         : Use MXE installed in DIR (default: ${default_mxerootdir})"
-  echo "  --rebuild              : Preserve existing build directories"
-  echo "  --with-core            : Build core (default)"
-  echo "  --without-core         : Don't build core"
-  echo "  --with-cli             : Build cli (default)"
-  echo "  --without-cli          : Don't build cli application and plugins"
-  echo "  --with-ninja           : Build with nina"
-  echo "  --with-qt              : Build Qt (default)"
-  echo "  --without-qt           : Don't build Qt application and plugins"
-  echo "  --with-plugins         : Build plugins (default)"
-  echo "  --without-plugins      : Don't build plugins"
-  echo "  --with-system-liba52   : Use the system liba52 (a52dec) instead of the bundled one"
-  echo "  --with-system-libmad   : Use the system libmad instead of the bundled one"
-  echo "  --nopkg                : Don't create a ZIP archive with all required libraries"
-  echo "  -a, --author           : Match the env setup used by the Author, implies --nopkg"
-}
-
-option_value() {
-  echo $(echo $* | cut -d '=' -f 2-)
-}
-
-option_name() {
-  echo $(echo $* | cut -d '=' -f 1 | cut -b 3-)
-}
-
-dir_check() {
-  op_name="$1"
-  dir_path="$2"
-  if [ "x$dir_path" != "x" ]; then
-    if [[ "$dir_path" != /* ]]; then
-      >&2 echo "Expected an absolute path for --$op_name=$dir_path, aborting."
-      exit 1
-    fi
-  else
-    >&2 echo "Empty path provided for --$op_name, aborting."
-    exit 1
-  fi
-  case "$dir_path" in
-  */)
-    echo $(expr "x$dir_path" : 'x\(.*[^/]\)') # strip trailing slashes
-    ;;
-  *)
-    echo "$dir_path"
-    ;;
-  esac
+  # common.sh Process uses EXTRA_CMAKE_FLAGS
+  export CMAKE_EXTRA_FLAGS="-DAVIDEMUX_TOP_SOURCE_DIR=$SRCTOP"
 }
 
 create_release_package() {
@@ -252,9 +246,6 @@ create_release_package() {
     mkdir "${TARGETDIR}"/styles || fail "creating styles directory"
   fi
 
-  # For DLL copying, if MINGW is /mingw64 (native), we should copy from there.
-  # The list of DLLs might vary.
-
   if [ "x$use_mxe" = "x1" ]; then
       BIN_DIR="${MINGW}/bin"
   else
@@ -268,9 +259,6 @@ create_release_package() {
   if [ "x${external_libmad}" = "x1" ]; then
     cp -v libmad-*.dll "$TARGETDIR"
   fi
-
-  # List of DLLs to copy. Attempt to copy them.
-  # In native builds, some might differ in name or presence.
 
   cp -v \
     libaom.dll \
@@ -317,7 +305,7 @@ create_release_package() {
     xvidcore.dll \
     zlib1.dll \
     "$TARGETDIR"
-# MXE may install libsqlite3 DLL to a wrong location
+
   if [ -f libsqlite3-*.dll ]; then
     cp -v libsqlite3-*.dll "$TARGETDIR"
   else
@@ -339,7 +327,7 @@ create_release_package() {
         bin/Qt6Widgets.dll \
         "$TARGETDIR"
   else
-      # Native Qt6, libraries are in bin usually
+      # Native Qt6
       cd "${MINGW}/bin"
       cp -v \
         Qt6Core.dll \
@@ -361,8 +349,6 @@ create_release_package() {
         plugins/styles/qmodernwindowsstyle.dll \
         "${TARGETDIR}"/styles/
   else
-      # Native, plugins are in share/qt6/plugins or lib/qt6/plugins?
-      # In MSYS2: /mingw64/share/qt6/plugins
       PLUGINS_DIR="${MINGW}/share/qt6/plugins"
       if [ ! -d "$PLUGINS_DIR" ]; then
            PLUGINS_DIR="${MINGW}/plugins"
@@ -394,81 +380,9 @@ create_release_package() {
   echo "Avidemux Windows package generated as \"${PACKAGE_DIR}/avidemux_r${BUILDDATE}_win${BITS}Qt6.zip\""
 }
 
-# Options handling
-
-while [ $# != 0 ]; do
-  config_option="$1"
-  case "$config_option" in
-  -h | --help)
-    usage
-    exit 1
-    ;;
-  -a | --author)
-    export author_setup=1
-    do_release_pkg=0
-    ;;
-  --mxe-root=*)
-    mxerootdir=$(dir_check $(option_name "$config_option") $(option_value "$config_option")) || exit 1
-    use_mxe=1
-    ;;
-  --debug)
-    debug=1
-    ;;
-  --rebuild)
-    rebuild=1
-    ;;
-  --without-qt)
-    do_qt=0
-    ;;
-  --without-cli)
-    do_cli=0
-    ;;
-  --without-plugins)
-    do_plugins=0
-    ;;
-  --without-core)
-    do_core=0
-    ;;
-  --with-qt)
-    do_qt=1
-    ;;
-  --with-cli)
-    do_cli=1
-    ;;
-  --with-plugins)
-    do_plugins=1
-    ;;
-  --with-ninja)
-    ninja=1
-    ;;
-  --with-core)
-    do_core=1
-    ;;
-  --with-system-liba52)
-    export external_liba52=1
-    ;;
-  --with-system-libmad)
-    export external_libmad=1
-    ;;
-  --nopkg)
-    do_release_pkg=0
-    ;;
-  *)
-    echo "unknown parameter $config_option"
-    usage
-    exit 1
-    ;;
-  esac
-  shift
-done
-
-# Set all the required paths and env variables
-
 setupEnv
 
-# Create destination directory
-
-echo "** Bootstrapping Avidemux **"
+echo "** Bootstrapping Avidemux (MinGW) **"
 if [ "x$author_setup" = "x1" ]; then
   rm -Rf "${MINGWDEV}"/*
 fi
@@ -478,8 +392,7 @@ fi
 mkdir -p "$INSTALL_DIR"
 echo "Build top dir : $BUILDTOP"
 
-# Build and install Avidemux components to the destination dir
-
+# Process calls
 if [ "x$do_core" = "x1" ]; then
   echo "** CORE **"
   Process buildMingwCore-${ARCH} "${SRCTOP}"/avidemux_core "-DCMAKE_CROSS_PREFIX=${CROSS_PREFIX}"
@@ -514,8 +427,6 @@ if [ "x$do_plugins" = "x1" ]; then
   echo "** Plugins Settings **"
   Process buildMingwPluginsSettings-${ARCH} "${SRCTOP}"/avidemux_plugins "-DPLUGIN_UI=SETTINGS $EXTRA_CMAKE_DEFS"
 fi
-
-# Create a ZIP archive with avidemux and all the required libs
 
 if [ "x$do_release_pkg" = "x1" ]; then
   create_release_package
