@@ -1,14 +1,10 @@
 #!/bin/bash
-# Bootstrapper to semi-automatically build avidemux deb/rpm from source
-# (c) Mean-Euma  2009/2024
-#
-# By default we use qt6 now
-#
-#
-RED="\e[31m"
-GREEN="\e[32m"
-ENDCOLOR="\e[0m"
-#
+# Bootstrapper to semi-automatically build avidemux deb/rpm from source on Linux
+
+# Source common functions
+source "$(dirname "$0")/common.sh"
+
+# Defaults
 packages_ext=""
 packages_dir="pkgs"
 rebuild=0
@@ -25,6 +21,7 @@ QT_FLAVOR="-DENABLE_QT6=True"
 COMPILER=""
 export QT_SELECT=qt6 # default for ubuntu, harmless for others
 install_prefix="$default_install_prefix"
+
 # -lc is required to build libADM_ae_lav* audio encoder plugins on 32 bit ubuntu
 need_ae_lav_build_quirk=""
 if [[ $(uname -m) = i?86 ]]; then
@@ -33,102 +30,19 @@ fi
 external_liba52=0
 external_libmad=0
 external_libmp4v2=0
-#test -f $HOME/myCC && export COMPILER="-DCMAKE_C_COMPILER=$HOME/myCC -DCMAKE_CXX_COMPILER=$HOME/myC++"
 
-fail() {
-  echo -e "${RED}** Failed at $1 **${ENDCOLOR}"
-  exit 1
-}
+export FAKEROOT_COMMAND="fakeroot"
+CMAKE_VERSION=$(cmake --version | head -n 1 | sed "s/^.* \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/g")
+echo "CMAKE Version : $CMAKE_VERSION"
+case "$CMAKE_VERSION" in
+2.8.[7-9] | 2.8.[1-9][0-9] | 3*)
+  echo "Cmake version >=2.8.7 doesnt need fakeroot"
+  export FAKEROOT_COMMAND=""
+  ;;
+esac
 
-Process() {
-  BASE=$1
-  SOURCEDIR=$2
-  INSTALL_PREFIX="-DCMAKE_INSTALL_PREFIX=$install_prefix"
-  EXTRA=$3
-  DEBUG=""
-  ASAN=""
-  BUILD_QUIRKS=""
-  if [ "x$do_ninja" = "x1" ]; then
-    BUILDER="Ninja"
-    MAKER="ninja"
-  else
-    BUILDER="Unix Makefiles"
-    MAKER="make -j $(nproc)"
-  fi
-  if [ "x$debug" = "x1" ]; then
-    DEBUG="-DVERBOSE=1 -DCMAKE_BUILD_TYPE=Debug"
-    BASE="${BASE}_debug"
-  fi
-  if [ "x$do_asan" = "x1" ]; then
-    BASE="${BASE}_asan"
-    ASAN="-DASAN=True"
-  fi
-  BUILDDIR="${PWD}/${BASE}"
-  FAKEROOT="-DFAKEROOT=$FAKEROOT_DIR"
-  echo -e "${GREEN}${BASE}: Building in \"${BUILDDIR}\" from \"${SOURCEDIR}\" with EXTRA=<$EXTRA>, DEBUG=<$DEBUG>, MAKER=<${MAKER}> ${ENDCOLOR}"
-  echo "   $BASE:Cmake started..."
-  $ADATE
-  if [ "x$rebuild" != "x1" ]; then
-    rm -Rf "${BUILDDIR}"
-  fi
-  if [ "x$need_ae_lav_build_quirk" = "x1" ]; then
-    BUILD_QUIRKS="-DAE_LAVCODEC_BUILD_QUIRK=true"
-  fi
-  if [ ! -e "$BUILDDIR" ]; then
-    mkdir "${BUILDDIR}" || fail "creating build directory"
-  fi
-  pushd "${BUILDDIR}" >/dev/null
-  cmake \
-    $COMPILER \
-    $PKG \
-    $FAKEROOT \
-    $INSTALL_PREFIX \
-    $EXTRA \
-    $BUILD_QUIRKS \
-    $ASAN \
-    $DEBUG \
-    -G "$BUILDER" \
-    "$SOURCEDIR" >&/tmp/logCmake$BASE || fail "cmake,result in /tmp/logCmake$BASE"
-  $ADATE
-  echo "   $BASE:Build started..."
-  ${MAKER} >&/tmp/log$BASE || fail "${MAKER}, result in /tmp/log$BASE"
-  if [ "x$PKG" != "x" ]; then
-    DESTDIR="${FAKEROOT_DIR}/tmp" $FAKEROOT_COMMAND ${MAKER} package || fail "packaging"
-  fi
-  $ADATE
-  echo "   $BASE:Install started..."
-  # we need the make install so that other packcges can be built against this one
-  DESTDIR="${FAKEROOT_DIR}" ${MAKER} install >&/tmp/logInstall$BASE || fail "install faied, see /tmp/logInstall$BASE"
-  popd >/dev/null
-  $ADATE
-  echo "   Done "
-}
-printModule() {
-  value=$1
-  name=$2
-  if [ "x$value" = "x1" ]; then
-    echo "    $name will be built"
-  else
-    echo "     $name will be skipped"
-  fi
-
-}
-config() {
-  echo "Build configuration :"
-  echo "******************* :"
-  echo "Build type :"
-  if [ "x$debug" = "x1" ]; then
-    echo "Debug build"
-  else
-    echo "Release build"
-  fi
-  printModule $do_core Core
-  printModule $do_qt ${qt_ext}
-  printModule $do_cli Cli
-  printModule $do_plugins Plugins
-}
 usage() {
-  echo "Bootstrap Avidemux:"
+  echo "Bootstrap Avidemux (Linux):"
   echo "***********************"
   echo "  --help                : Print usage"
   echo "  --prefix=DIR          : Install to directory DIR (default: $default_install_prefix)"
@@ -155,47 +69,23 @@ usage() {
   echo "  --with-system-libmp4v2: Use system libmp4v2 instead of the bundled one"
   echo "The end result will be in the install folder. You can then copy it to / or whatever"
   config
+}
 
-}
-option_value() {
-  echo $(echo $* | cut -d '=' -f 2-)
-}
-option_name() {
-  echo $(echo $* | cut -d '=' -f 1 | cut -b 3-)
-}
-dir_check() {
-  op_name="$1"
-  dir_path="$2"
-  if [ "x$dir_path" != "x" ]; then
-    if [[ "$dir_path" != /* ]]; then
-      >&2 echo "Expected an absolute path for --$op_name=$dir_path, aborting."
-      exit 1
-    fi
+config() {
+  echo "Build configuration :"
+  echo "******************* :"
+  echo "Build type :"
+  if [ "x$debug" = "x1" ]; then
+    echo "Debug build"
   else
-    >&2 echo "Empty path provided for --$op_name, aborting."
-    exit 1
+    echo "Release build"
   fi
-  case "$dir_path" in
-  */)
-    echo $(expr "x$dir_path" : 'x\(.*[^/]\)') # strip trailing slashes
-    ;;
-  *)
-    echo "$dir_path"
-    ;;
-  esac
+  printModule $do_core Core
+  printModule $do_qt ${qt_ext}
+  printModule $do_cli Cli
+  printModule $do_plugins Plugins
 }
-#
 
-export FAKEROOT_COMMAND="fakeroot"
-CMAKE_VERSION=$(cmake --version | head -n 1 | sed "s/^.* \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/g")
-echo "CMAKE Version : $CMAKE_VERSION"
-case "$CMAKE_VERSION" in
-2.8.[7-9] | 2.8.[1-9][0-9] | 3*)
-  echo "Cmake version >=2.8.7 doesnt need fakeroot"
-  export FAKEROOT_COMMAND=""
-  ;;
-esac
-# Could probably do it with getopts...
 while [ $# != 0 ]; do
   config_option="$1"
   case "$config_option" in
@@ -294,9 +184,14 @@ if [[ $BUILDTOP = *" "* ]]; then
   echo "This is unsupported by FFmpeg configure."
   fail "build prerequisites"
 fi
-SRCTOP=$(cd $(dirname "$0") && pwd)
+
+# SRCTOP should be the root of the repo.
+# Since this script is in bootStrap/, SRCTOP is $(cd $(dirname "$0")/.. && pwd)
+SRCTOP=$(cd $(dirname "$0")/.. && pwd)
+
 POSTFIX=""
-FAKEROOT_DIR="${BUILDTOP}/install"
+export FAKEROOT_DIR="${BUILDTOP}/install"
+
 if [ "x$external_liba52" = "x1" ]; then
   EXTRA_CMAKE_DEFS="-DUSE_EXTERNAL_LIBA52=true $EXTRA_CMAKE_DEFS"
 fi
@@ -318,6 +213,11 @@ else
   mkdir -p "${FAKEROOT_DIR}"
   echo "Cleaning packages"
   find . -name "*.$packages_ext" | grep -vi cpa | xargs rm -f
+fi
+
+# Need to export build quirks for common.sh Process
+if [ "x$need_ae_lav_build_quirk" = "x1" ]; then
+  export BUILD_QUIRKS="-DAE_LAVCODEC_BUILD_QUIRK=true"
 fi
 
 if [ "x$do_core" = "x1" ]; then
