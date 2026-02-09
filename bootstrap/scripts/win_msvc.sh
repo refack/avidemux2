@@ -86,7 +86,7 @@ done
 
 echo "**BootStrapping avidemux (MSVC) **"
 BUILDTOP=$PWD
-SRCTOP=$(cd $(dirname "$0")/.. && pwd)
+SRCTOP=$(cd $(dirname "$0")/../.. && pwd)
 install_prefix="${BUILDTOP}/install"
 
 export CMAKE_EXTRA_FLAGS="-DENABLE_QT6=ON $TOOLCHAIN_FLAG -DAVIDEMUX_SOURCE_DIR=$SRCTOP"

@@ -86,7 +86,7 @@ done
 
 echo "**BootStrapping avidemux (Haiku) **"
 BUILDTOP=$PWD
-SRCTOP=$(cd $(dirname "$0")/.. && pwd)
+SRCTOP=$(cd $(dirname "$0")/../.. && pwd)
 
 # Haiku specific flags
 export CMAKE_EXTRA_FLAGS="-D__STDC_CONSTANT_MACROS -DPTHREAD_INCLUDE_DIR=/boot/develop/headers/posix -DAVIDEMUX_SOURCE_DIR=$SRCTOP"

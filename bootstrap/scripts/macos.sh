@@ -146,7 +146,7 @@ if [[ $BUILDTOP = *" "* ]]; then
   fail "bootstrap"
 fi
 
-SRCTOP=$(cd $(dirname "$0")/.. && pwd)
+SRCTOP=$(cd $(dirname "$0")/../.. && pwd)
 
 # Check case sensitivity
 # Assuming checkCaseSensitivity.sh is moved to bootStrap/

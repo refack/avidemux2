@@ -146,7 +146,7 @@ setupEnv() {
     echo "This is unsupported by FFmpeg configure."
     fail "build prerequisites"
   fi
-  export SRCTOP=$(cd $(dirname "$0")/.. && pwd)
+  export SRCTOP=$(cd $(dirname "$0")/../.. && pwd)
   export ARCH="x86_64"
   export QT_SELECT=6
 

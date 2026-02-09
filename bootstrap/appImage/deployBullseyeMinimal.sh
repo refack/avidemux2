@@ -139,9 +139,9 @@ find . -type f -exec sed -i -e 's|/usr/lib/x86_64-linux-gnu|././././././././././
 find . -type f -exec sed -i -e 's|/usr/lib|././/lib|g' {} \; ; cd ..
 #
 cd $ORG
-cp appImage/AppRunBuster install/AppRun
-cp appImage/avidemux.png install
-cp appImage/avidemux.desktop install
+cp bootstrap/appImage/AppRunBuster install/AppRun
+cp bootstrap/appImage/avidemux.png install
+cp bootstrap/appImage/avidemux.desktop install
 
 FT_PROBE_EXE_NAME="freetype_probe"
 FT_PROBE_LOCATION="buildPluginsCommon/ADM_videoFilters6/ass"
