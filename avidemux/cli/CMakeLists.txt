@@ -18,7 +18,11 @@ MESSAGE("#########################################")
 MESSAGE("")
 MESSAGE(STATUS "Checking for avidemux development files ..")
 
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+IF(NOT AVIDEMUX_ROOT_DIR)
+  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
+ENDIF()
+LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
+
 IF(NOT FAKEROOT)
   SET(AVIDEMUX_FAKEROOT "")
 ELSE()
@@ -59,9 +63,9 @@ MESSAGE(STATUS "Building agains version ${AVIDEMUX_VERSION} with fflibs ${FFMPEG
 
 IF(WIN32)
   IF(MSVC)
-    INCLUDE(adm_win32_vs)
+    INCLUDE(adm_win32_vs_cli)
   ELSE()
-    INCLUDE(adm_win32_mingw)
+    INCLUDE(adm_win32_mingw_cli)
   ENDIF()
 ELSE()
   IF(APPLE)
@@ -70,7 +74,7 @@ ELSE()
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
     INCLUDE(adm_osx)
   ELSE()
-    INCLUDE(adm_default)
+    INCLUDE(adm_default_cli)
   ENDIF()
 ENDIF()
 #-----------------------------------
@@ -102,22 +106,22 @@ INCLUDE_DIRECTORIES(ADM_render_cli)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Add subdirectories
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-ADD_SUBDIRECTORY(../common ./common)
+ADD_SUBDIRECTORY("${AVIDEMUX_ROOT_DIR}/avidemux/common" ./common)
 ADD_SUBDIRECTORY(ADM_UIs ./ADM_UIsCli)
 ADD_SUBDIRECTORY(ADM_userInterfaces ./ADM_userInterfacesCli)
 
-SDLify(../common/main.cpp)
+SDLify("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp")
 IF(ADM_SUBVERSION)
-  ADD_SOURCE_CFLAGS(../common/main.cpp "-DADM_SUBVERSION=\"${ADM_SUBVERSION}\"")
-  ADD_SOURCE_CFLAGS(../common/main.cpp "-DFFMPEG_VERSION=\"${FFMPEG_VERSION}\"")
+  ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DADM_SUBVERSION=\"${ADM_SUBVERSION}\"")
+  ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DFFMPEG_VERSION=\"${FFMPEG_VERSION}\"")
 ENDIF()
-ADD_SOURCE_CFLAGS(../common/main.cpp "-DADM_VERSION=\"${AVIDEMUX_VERSION}\"")
+ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DADM_VERSION=\"${AVIDEMUX_VERSION}\"")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Version Info
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 IF(WIN32)
-  WINDRESIFY(mainCLI  "${CMAKE_CURRENT_SOURCE_DIR}/../common/xpm/adm.ico" src "avidemux_cli" "Avidemux Video Editor, CLI Version")
+  WINDRESIFY(mainCLI  "${AVIDEMUX_ROOT_DIR}/avidemux/common/xpm/adm.ico" src "avidemux_cli" "Avidemux Video Editor, CLI Version")
   TARGET_SOURCES(avidemux3_cli PRIVATE ${src})
 ENDIF()
 

@@ -28,7 +28,11 @@ IF(MSVC)
   ADD_COMPILE_OPTIONS(/std:c++17 /Zc:__cplusplus  /permissive- )
 ENDIF()
 
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+IF(NOT AVIDEMUX_ROOT_DIR)
+  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
+ENDIF()
+LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
+
 IF(NOT FAKEROOT)
   SET(AVIDEMUX_FAKEROOT "")
 ELSE()
@@ -68,9 +72,9 @@ MESSAGE(STATUS "Building agains version ${AVIDEMUX_VERSION} with fflibs ${FFMPEG
 
 IF(WIN32)
   IF(MSVC)
-    INCLUDE(adm_win32_vs)
+    INCLUDE(adm_win32_vs_qt4)
   ELSE()
-    INCLUDE(adm_win32_mingw)
+    INCLUDE(adm_win32_mingw_qt4)
   ENDIF()
 ELSE()
   IF(APPLE)
@@ -79,7 +83,7 @@ ELSE()
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
     INCLUDE(adm_osx_qt)
   ELSE()
-    INCLUDE(adm_default)
+    INCLUDE(adm_default_qt4)
   ENDIF()
 ENDIF()
 #-----------------------------------
@@ -124,7 +128,7 @@ CONFIGURE_FILE("${ADM_CMAKE_DIR}/config.h.cmake" "${CMAKE_BINARY_DIR}/config/${Q
 MESSAGE(STATUS "${QT_EXTENSION} config.h generated")
 
 INCLUDE_DIRECTORIES(BEFORE "${CMAKE_BINARY_DIR}/config/${QT_EXTENSION}/")
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../common)
+INCLUDE_DIRECTORIES("${AVIDEMUX_ROOT_DIR}/avidemux/common")
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/ADM_render_qt)
 
 ADD_SUBDIRECTORY(ADM_render_qt)
@@ -150,7 +154,7 @@ ENDIF()
 INCLUDE_DIRECTORIES(ADM_UIs/include/)
 
 IF(WIN32 AND NOT CROSS)
-  ADD_SUBDIRECTORY(../common ./commonQt4)
+  ADD_SUBDIRECTORY("${AVIDEMUX_ROOT_DIR}/avidemux/common" ./commonQt4)
 ELSE()
   # Make symlink else eclipe and kdev4 are puzzled by the tree structure
   # Not needed for plain build
@@ -170,19 +174,19 @@ ADD_SUBDIRECTORY(ADM_UIs ./ADM_UIsQt4)
 ADD_SUBDIRECTORY(ADM_qt ./ADM_qtxQt4)
 ADD_SUBDIRECTORY(ADM_userInterfaces ./ADM_userInterfaces${QT_LIBRARY_EXTENSION})
 
-SDLify(../common/main.cpp)
+SDLify("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp")
 IF(ADM_SUBVERSION)
-  ADD_SOURCE_CFLAGS(../common/main.cpp "-DADM_SUBVERSION=\"${ADM_SUBVERSION}\"")
-  ADD_SOURCE_CFLAGS(../common/main.cpp "-DFFMPEG_VERSION=\"${FFMPEG_VERSION}\"")
+  ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DADM_SUBVERSION=\"${ADM_SUBVERSION}\"")
+  ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DFFMPEG_VERSION=\"${FFMPEG_VERSION}\"")
 ENDIF()
-ADD_SOURCE_CFLAGS(../common/main.cpp "-DADM_VERSION=\"${AVIDEMUX_VERSION}\"")
-ADD_SOURCE_CFLAGS(../common/main.cpp "-DQT_FLAVOR=\"${QT_EXTENSION}\"")
+ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DADM_VERSION=\"${AVIDEMUX_VERSION}\"")
+ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DQT_FLAVOR=\"${QT_EXTENSION}\"")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Icon for windows
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 IF(WIN32)
-  WINDRESIFY(mainQt  "${CMAKE_CURRENT_SOURCE_DIR}/../common/xpm/adm.ico" src "avidemux" "Avidemux Video Editor")
+  WINDRESIFY(mainQt  "${AVIDEMUX_ROOT_DIR}/avidemux/common/xpm/adm.ico" src "avidemux" "Avidemux Video Editor")
   SET(ADM_EXE_SRCS ${ADM_EXE_SRCS} ${src})
 ENDIF()
 
@@ -283,7 +287,6 @@ admPackager(qt4Package)
 INSTALL(FILES ${CMAKE_BINARY_DIR}/config/${QT_EXTENSION}/config.h DESTINATION "${AVIDEMUX_INSTALL_INCLUDE_DIR}/avidemux/${AVIDEMUX_API_VERSION}/${QT_EXTENSION}" COMPONENT dev)
 
 # Install QT stuff
-ADM_INSTALL_CMAKE_FOLDER("${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # install headers
 ADM_INSTALL_QT_INCLUDE_FOLDER("${CMAKE_CURRENT_SOURCE_DIR}/ADM_openGL/include/"  ADM_openGL)
 ADM_INSTALL_QT_INCLUDE_FOLDER("${CMAKE_CURRENT_SOURCE_DIR}/ADM_UIs/include/"  ADM_UIs)

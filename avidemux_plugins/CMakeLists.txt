@@ -19,7 +19,11 @@ MESSAGE("#########################################")
 MESSAGE("")
 MESSAGE(STATUS "Checking for avidemux development files ..")
 
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+IF(NOT AVIDEMUX_ROOT_DIR)
+  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../" ABSOLUTE)
+ENDIF()
+LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
+
 IF(NOT FAKEROOT)
   SET(AVIDEMUX_FAKEROOT "")
 ELSE()
@@ -69,7 +73,7 @@ ELSE()
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
     INCLUDE(adm_osx)
   ELSE()
-    INCLUDE(adm_default)
+    INCLUDE(adm_default_plugins)
   ENDIF()
 ENDIF()
 
@@ -320,7 +324,7 @@ DISPLAY_SUMMARY_LIST()
 MACRO(ADD_DUMMY condt flder)
   IF(${${condt}})  # # Do a dummy install in case there is nothing...
     MESSAGE(STATUS "Adding dummy install file (${condt}:${${condt}})")
-    INSTALL(FILES cmake/admDummy.cmake
+    INSTALL(FILES "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/admDummy.cmake"
     DESTINATION ${AVIDEMUX_INSTALL_INCLUDE_DIR}/avidemux/${AVIDEMUX_MAJOR_MINOR}/dummy_${flder}
     COMPONENT runtime
   )

@@ -10,7 +10,11 @@ ELSE()
   SET(AVIDEMUX_FAKEROOT "${FAKEROOT}")
 ENDIF()
 # To get icons etc..
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/../qt4/cmake )
+IF(NOT AVIDEMUX_ROOT_DIR)
+  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
+ENDIF()
+LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
+
 #probably not needed
 LIST(APPEND CMAKE_MODULE_PATH ${AVIDEMUX_FAKEROOT}${CMAKE_INSTALL_PREFIX}/include/avidemux/${AVIDEMUX_API_VERSION}/cmake ${ADM_CMAKE_DIR})
 #
@@ -131,8 +135,8 @@ FOREACH(lang ${ListOfTranslationFiles})
 ENDFOREACH()
 
 # Fixup bundle
-CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/cmake/admFixupBundle.cmake.in" "${CMAKE_BINARY_DIR}/admFixupBundle.cmake" @ONLY)
-CONFIGURE_FILE("${CMAKE_SOURCE_DIR}/cmake/macos-adhoc-sign-app.sh.in" "${CMAKE_BINARY_DIR}/macos-adhoc-sign-app.sh" @ONLY)
+CONFIGURE_FILE("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/admFixupBundle.cmake.in" "${CMAKE_BINARY_DIR}/admFixupBundle.cmake" @ONLY)
+CONFIGURE_FILE("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/macos-adhoc-sign-app.sh.in" "${CMAKE_BINARY_DIR}/macos-adhoc-sign-app.sh" @ONLY)
 INSTALL(SCRIPT "${CMAKE_BINARY_DIR}/admFixupBundle.cmake" COMPONENT Runtime)
 
 #

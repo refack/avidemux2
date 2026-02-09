@@ -8,8 +8,11 @@ MESSAGE("Configure for avidemux Gtk Started")
 MESSAGE("#########################################")
 MESSAGE("")
 
-include(../commonCmakeApplication.cmake)
-include(admCheckGtk)
+IF(NOT AVIDEMUX_ROOT_DIR)
+  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
+ENDIF()
+include("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/commonCmakeApplication.cmake")
+include("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/admCheckGtk.cmake")
 
 checkGtk()
 
@@ -20,7 +23,7 @@ ADD_DEFINITIONS(-DADM_UI_TYPE_BUILD=ADM_UI_GTK)
 SET(CONFIG_HEADER_TYPE ADM_BUILD_GTK)
 SET(UI_SUFFIX gtk)
 
-CONFIGURE_FILE("${AVIDEMUX_TOP_SOURCE_DIR}/cmake/config.h.cmake" "${CMAKE_BINARY_DIR}/config/gtk/config.h")
+CONFIGURE_FILE("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/config.h.cmake" "${CMAKE_BINARY_DIR}/config/gtk/config.h")
 MESSAGE(STATUS "GTK config.h generated")
 
 INCLUDE_DIRECTORIES(BEFORE "${CMAKE_BINARY_DIR}/config/gtk/")
@@ -28,13 +31,13 @@ INCLUDE_DIRECTORIES(BEFORE "${CMAKE_BINARY_DIR}/config/gtk/")
 # #######################################
 # Add subdirectories
 # #######################################
-ADD_SUBDIRECTORY(../common ./common)
+ADD_SUBDIRECTORY("${AVIDEMUX_ROOT_DIR}/avidemux/common" ./common)
 ADD_SUBDIRECTORY(ADM_UIs ./ADM_UIsGtk)
 ADD_SUBDIRECTORY(ADM_userInterfaces ./ADM_userInterfacesGtk)
 
-SDLify(../common/main.cpp)
-ADD_SOURCE_CFLAGS(../common/main.cpp "-DADM_SUBVERSION='\"${ADM_SUBVERSION}\"'")
-ADD_SOURCE_CFLAGS(../common/main.cpp "-DADM_VERSION='\"${AVIDEMUX_VERSION}\"'")
+SDLify("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp")
+ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DADM_SUBVERSION='\"${ADM_SUBVERSION}\"'")
+ADD_SOURCE_CFLAGS("${AVIDEMUX_ROOT_DIR}/avidemux/common/main.cpp" "-DADM_VERSION='\"${AVIDEMUX_VERSION}\"'")
 
 # ##########################################
 # Version Info
@@ -56,7 +59,7 @@ if (WIN32)
   SET(AVIDEMUX_ICON "adm.ico")
   SET(ADM_WIN_RES "adm.obj")
   SET(ADM_EXE_SRCS ${ADM_EXE_SRCS} ${ADM_WIN_RES})
-  CONFIGURE_FILE("${AVIDEMUX_TOP_SOURCE_DIR}/cmake/admWin32.rc.in" ${CMAKE_CURRENT_BINARY_DIR}/admWin.rc IMMEDIATE)
+  CONFIGURE_FILE("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/cmake_win32_rc/admWin32.rc.in" ${CMAKE_CURRENT_BINARY_DIR}/admWin.rc IMMEDIATE)
   include(admWindRes)
   ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ADM_WIN_RES} COMMAND ${WINDRES}.exe -F ${WIN_RES_TARGET} -i ${CMAKE_CURRENT_BINARY_DIR}/admWin.rc -o ${CMAKE_CURRENT_BINARY_DIR}/${ADM_WIN_RES} -O coff --define VS_VERSION_INFO=1)
 endif (WIN32)

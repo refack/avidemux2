@@ -21,8 +21,11 @@ SET(AVIDEMUX_CORE_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 SET(AVIDEMUX_TOP_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 SET(AVIDEMUX_CORE_BUILD_DIR ${CMAKE_BINARY_DIR})
 SET(AVIDEMUX_THIS_IS_CORE True)
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_win32_rc")
+IF(NOT AVIDEMUX_ROOT_DIR)
+  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../" ABSOLUTE)
+ENDIF()
+LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
+LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/cmake_win32_rc")
 
 IF(WIN32)
   SET(ADM_PLUGIN_DIR "plugins")
@@ -84,7 +87,7 @@ ENDIF()
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Generate config.h
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-CONFIGURE_FILE("${AVIDEMUX_CORE_SOURCE_DIR}/cmake/ADM_coreConfig.h.cmake" "${CMAKE_BINARY_DIR}/config/ADM_coreConfig.h")
+CONFIGURE_FILE("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/ADM_coreConfig.h.cmake" "${CMAKE_BINARY_DIR}/config/ADM_coreConfig.h")
 INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}/config")
 MESSAGE(STATUS "ADM_coreConfig.h generated")
 MESSAGE("")
@@ -168,9 +171,9 @@ IF(USE_VIDEOTOOLBOX)
   ADM_INSTALL_INCLUDE_FOLDER("${HW_ACCEL_FOLDER}/ADM_coreVideoToolbox/include/" ADM_coreVideoToolbox)
 ENDIF()
 
-ADM_INSTALL_CMAKE_FOLDER("${AVIDEMUX_CORE_SOURCE_DIR}/cmake")
-ADM_INSTALL_CMAKE_HELPER_FOLDER("${AVIDEMUX_CORE_SOURCE_DIR}/cmake/" "cmake_compile_check/")
-ADM_INSTALL_CMAKE_HELPER_FOLDER("${AVIDEMUX_CORE_SOURCE_DIR}/cmake/" "cmake_win32_rc/")
+ADM_INSTALL_CMAKE_FOLDER("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
+ADM_INSTALL_CMAKE_HELPER_FOLDER("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/" "cmake_compile_check/")
+ADM_INSTALL_CMAKE_HELPER_FOLDER("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/" "cmake_win32_rc/")
 #
 
 INSTALL(FILES ${CMAKE_BINARY_DIR}/config/ADM_coreConfig.h DESTINATION "${AVIDEMUX_INSTALL_INCLUDE_DIR}/avidemux/${AVIDEMUX_MAJOR_MINOR}" COMPONENT dev)

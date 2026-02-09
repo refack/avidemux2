@@ -28,6 +28,7 @@ ENDMACRO()
 # ARGV2 = library to check
 # ARGV3 = function to check
 # ARVG4 = extra required libs
+SET(ADM_CMAKE_HELPER_DIR ${CMAKE_CURRENT_LIST_DIR})
 MACRO(FIND_HEADER_AND_LIB prefix headerFile)
   IF(NOT DEFINED ${prefix}_FOUND)
     SET(${prefix}_FOUND 0 CACHE INTERNAL "")
@@ -78,11 +79,7 @@ ENDMACRO()
 
 MACRO(ADM_COMPILE _file _def _include _lib _varToSet _output)
   #MESSAGE(STATUS " ADM_compile <${_file}>")
-  IF(AVIDEMUX_THIS_IS_CORE)
-    SET(src ${AVIDEMUX_CORE_SOURCE_DIR}/cmake/cmake_compile_check/${_file})
-  ELSE()
-    SET(src ${ADM_CMAKE_DIR}/cmake_compile_check/${_file})
-  ENDIF()
+  SET(src ${ADM_CMAKE_HELPER_DIR}/cmake_compile_check/${_file})
   #MESSAGE(STATUS " Compiling <${src}>")
   IF(NOT DEFINED ${_varToSet}_COMPILED)
     SET(${_varToSet}_COMPILED 1 CACHE INTERNAL "")

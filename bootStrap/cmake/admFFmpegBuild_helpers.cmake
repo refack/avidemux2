@@ -310,7 +310,7 @@ MACRO(ADM_FF_BUILD_UNIX_STYLE)
   SET(ffmpeg_bash_directory ${BASH_EXECUTABLE})
   convertPathToUnix(ffmpeg_bash_directory ${BASH_EXECUTABLE})
   get_filename_component(ffmpeg_bash_directory ${ffmpeg_bash_directory} PATH)
-  configure_FILE("${AVIDEMUX_CORE_SOURCE_DIR}/cmake/ffmpeg_configure.sh.cmake" "${FFMPEG_BINARY_DIR}/ffmpeg_configure.sh")
+  configure_FILE("${CMAKE_CURRENT_LIST_DIR}/ffmpeg_configure.sh.cmake" "${FFMPEG_BINARY_DIR}/ffmpeg_configure.sh")
 
   execute_process(COMMAND ${BASH_EXECUTABLE} ffmpeg_configure.sh WORKING_DIRECTORY "${FFMPEG_BINARY_DIR}"
                     OUTPUT_VARIABLE FFMPEG_CONFIGURE_OUTPUT RESULT_VARIABLE FFMPEG_CONFIGURE_RESULT)
@@ -346,7 +346,7 @@ MACRO(ADM_FF_BUILD_UNIX_STYLE)
 
   SET(ffmpeg_gnumake_executable ${GNUMAKE_EXECUTABLE})
   convertPathToUnix(ffmpeg_gnumake_executable ${BASH_EXECUTABLE})
-  CONFIGURE_FILE("${AVIDEMUX_CORE_SOURCE_DIR}/cmake/ffmpeg_make.sh.cmake" "${FFMPEG_BINARY_DIR}/ffmpeg_make.sh")
+  CONFIGURE_FILE("${CMAKE_CURRENT_LIST_DIR}/ffmpeg_make.sh.cmake" "${FFMPEG_BINARY_DIR}/ffmpeg_make.sh")
   registerFFmpeg("${FFMPEG_SOURCE_DIR}" "${FFMPEG_BINARY_DIR}" 0)
 ENDMACRO()
 #
