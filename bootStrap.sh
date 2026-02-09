@@ -28,7 +28,7 @@ if [ -z "$TARGET" ]; then
   esac
 fi
 
-SCRIPT_DIR="$(dirname "$0")/bootStrap"
+SCRIPT_DIR="$(dirname "$0")/bootstrap/scripts"
 SCRIPT=""
 
 case "$TARGET" in

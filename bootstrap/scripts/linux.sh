@@ -186,8 +186,8 @@ if [[ $BUILDTOP = *" "* ]]; then
 fi
 
 # SRCTOP should be the root of the repo.
-# Since this script is in bootStrap/, SRCTOP is $(cd $(dirname "$0")/.. && pwd)
-SRCTOP=$(cd $(dirname "$0")/.. && pwd)
+# Since this script is in bootstrap/build/, SRCTOP is $(cd $(dirname "$0")/../.. && pwd)
+SRCTOP=$(cd $(dirname "$0")/../.. && pwd)
 
 POSTFIX=""
 export FAKEROOT_DIR="${BUILDTOP}/install"

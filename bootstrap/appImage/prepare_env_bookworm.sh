@@ -1,10 +1,11 @@
 #!/bin/bash
-cd "$(dirname "$0")/.."
+# Prepare environment for Bookworm AppImage build
+# Extracted from makeAppImageBookwormMinimal.sh
+
 nodeps=""
 nofail=""
-nobuild=""
-rebuild=""
 missing_pkgs=()
+
 # build dependencies
 BUILD_DEPS="build-essential \
 cmake \
@@ -35,24 +36,22 @@ wget"
 
 NONFREE_PACKAGES="libfaac-dev \
 libfdk-aac-dev"
-#
+
 usage()
 {
     echo "Usage: $0 [Options]"
     echo "***********************"
     echo "  --help or -h      : Print usage"
-    echo "  --setup-only      : Install build dependencies and exit"
     echo "  --no-install-deps : Do not install missing dependencies, fail instead"
     echo "  --no-fail-missing : Try to continue even if dependencies are missing"
-    echo "  --rebuild         : Preserve existing build directories"
 }
-#
+
 fail()
 {
     echo "$@"
     exit 1
 }
-#
+
 check_nvenc()
 {
     if (pkg-config --exists ffnvcodec); then
@@ -72,7 +71,7 @@ check_nvenc()
     make || return 1
     sudo make install || return 1
 }
-#
+
 check_aom()
 {
     if (pkg-config --exists aom); then
@@ -123,7 +122,7 @@ check_aom()
     popd > /dev/null
     return 0
 }
-#
+
 check_deps()
 {
     for i in $@; do
@@ -133,7 +132,7 @@ check_deps()
         fi
     done
 }
-#
+
 setup()
 {
     check_deps ${BUILD_DEPS}
@@ -179,8 +178,8 @@ setup()
         fail "Cannot install required version of libaom."
     fi
 }
-#
-echo "Automatic AppImage generator for Avidemux, Debian 12.6 version"
+
+# Main execution
 ID=$(id -u)
 if [ "x${ID}" = "x0" ]; then
     fail "Won't run as root, aborting."
@@ -193,17 +192,11 @@ while [ $# != 0 ]; do
             usage
             exit 0
             ;;
-        --setup-only)
-            nobuild="1"
-            ;;
         --no-install-deps)
             nodeps="1"
             ;;
         --no-fail-missing)
             nofail="1"
-            ;;
-        --rebuild)
-            rebuild="${config_option}"
             ;;
         *)
             echo "unknown parameter ${config_option}"
@@ -215,51 +208,3 @@ while [ $# != 0 ]; do
 done
 
 setup
-
-if [ "x${nobuild}" = "x1" ]; then
-    exit $?
-fi
-
-RUNTIME="runtime-x86_64"
-RT_DIR="externalBinaries/AppImageKit"
-SHA256SUM="24da8e0e149b7211cbfb00a545189a1101cb18d1f27d4cfc1895837d2c30bc30" # size: 188392 bytes
-TO_CHECK=""
-DO_DOWNLOAD=0
-echo "Current directory: \"${PWD}\""
-if [ ! -e "${RT_DIR}" ]; then
-    mkdir -p "${RT_DIR}" || exit 1
-fi
-pushd "${RT_DIR}" > /dev/null || exit 1
-if [ -f "${RUNTIME}" ]; then
-    TO_CHECK=$(sha256sum "${RUNTIME}" | cut -d ' ' -f 1)
-    if [ "${SHA256SUM}" != "${TO_CHECK}" ]; then
-        echo "Checksum doesn't match, will try to re-download."
-        rm -f "${RUNTIME}" > /dev/null 2>&1
-        DO_DOWNLOAD=1
-    else
-        echo "${RUNTIME} has passed the check."
-    fi
-else
-    echo "AppImageKit runtime is missing, will try to download."
-    DO_DOWNLOAD=1
-fi
-if [ "x${DO_DOWNLOAD}" = "x1" ]; then
-    URL="https://github.com/AppImage/AppImageKit/releases/download/12/runtime-x86_64"
-    wget -O "${RUNTIME}" "${URL}" || exit 1
-    TO_CHECK=$(sha256sum "${RUNTIME}" | cut -d ' ' -f 1)
-fi
-popd > /dev/null
-if [ "${SHA256SUM}" != "${TO_CHECK}" ]; then
-    echo "Checksum doesn't match, aborting."
-    exit 1
-fi
-
-rm -rf install > /dev/null 2>&1
-
-if [ -z "${QTDIR}" ]; then
-    export QTDIR="/usr/lib/qt6"
-fi
-SRCTOP=$(cd $(dirname "$0")/.. && pwd)
-bash "${SRCTOP}/bootStrap/linux.sh" --with-system-libmad ${rebuild} 2>&1 || fail "Build failed, please inspect /tmp/log* files."
-bash "${SRCTOP}/appImage/deployBookwormMinimal.sh" "${PWD}/${RT_DIR}/${RUNTIME}"
-exit $?
