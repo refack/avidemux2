@@ -1,6 +1,7 @@
 #pragma once
-#include "ADM_coreVideoEncoderFFmpeg.h"
+
 #include "ffQsvAV1.h"
+#include "ADM_coreVideoEncoderFFmpeg.h"
 
 enum FF_QsvAV1Preset
 {
@@ -37,6 +38,7 @@ enum FF_QsvAV1RateControl
   10000, /* max_bitrate */ \
   100,   /* gopsize */ \
   0, /* lookahead */ \
+  0, /* gpu_index */ \
 }
 
 /**

@@ -23,14 +23,11 @@ MESSAGE(STATUS "Checking for avidemux development files ..")
 
 ADD_DEFINITIONS(-DADM_UI_TYPE_BUILD=ADM_UI_QT4)
 
-IF(MSVC)
-  MESSAGE(STATUS "Temporary hack")
-  ADD_COMPILE_OPTIONS(/std:c++17 /Zc:__cplusplus  /permissive- )
-ENDIF()
+#IF(MSVC)
+#  MESSAGE(STATUS "Temporary hack")
+#  ADD_COMPILE_OPTIONS(/std:c++17 /Zc:__cplusplus  /permissive- )
+#ENDIF()
 
-IF(NOT AVIDEMUX_ROOT_DIR)
-  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
-ENDIF()
 LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
 
 IF(NOT FAKEROOT)

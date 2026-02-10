@@ -18,9 +18,6 @@ MESSAGE("#########################################")
 MESSAGE("")
 MESSAGE(STATUS "Checking for avidemux development files ..")
 
-IF(NOT AVIDEMUX_ROOT_DIR)
-  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
-ENDIF()
 LIST(APPEND CMAKE_MODULE_PATH "${AVIDEMUX_ROOT_DIR}/bootStrap/cmake")
 
 IF(NOT FAKEROOT)

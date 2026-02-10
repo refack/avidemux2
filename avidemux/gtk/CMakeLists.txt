@@ -8,9 +8,6 @@ MESSAGE("Configure for avidemux Gtk Started")
 MESSAGE("#########################################")
 MESSAGE("")
 
-IF(NOT AVIDEMUX_ROOT_DIR)
-  get_filename_component(AVIDEMUX_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
-ENDIF()
 include("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/commonCmakeApplication.cmake")
 include("${AVIDEMUX_ROOT_DIR}/bootStrap/cmake/admCheckGtk.cmake")
 

@@ -39,6 +39,6 @@ ENDIF()
 
 IF(NOT APPLE)
   TARGET_LINK_LIBRARIES(ADM_script_tinyPy PRIVATE -Wl,--version-script,"${CMAKE_CURRENT_SOURCE_DIR}/ADM_script_tinyPy.v")
-ELSEIF()
+ELSE()
   TARGET_LINK_LIBRARIES(ADM_script_tinyPy PRIVATE -Wl,-read_only_relocs,suppress)
 ENDIF()

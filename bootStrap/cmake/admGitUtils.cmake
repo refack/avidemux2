@@ -53,7 +53,7 @@ MACRO(admGetGitRevision _dir _rev)
                WORKING_DIRECTORY ${_dir} 
                RESULT_VARIABLE result 
                OUTPUT_VARIABLE output
-               )
+       )
 
        #MESSAGE(STATUS "git last entry is ${output} -- ${result}")
        ADM_TIMESTAMP(date)

@@ -28,7 +28,8 @@ if [ -z "$TARGET" ]; then
   esac
 fi
 
-SCRIPT_DIR="$(dirname "$0")/bootstrap/scripts"
+AVIDEMUX_ROOT_DIR="$(dirname "$0")"
+SCRIPT_DIR="$AVIDEMUX_ROOT_DIR/bootstrap/scripts"
 SCRIPT=""
 
 case "$TARGET" in

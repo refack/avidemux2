@@ -1,12 +1,7 @@
 INCLUDE(vf_plugin)
 
 SET(ImageStabCommon_SRCS ADM_vidImageStab.cpp motest.cpp)
-IF(DO_QT4)
-    include(admCheckThreads)
-ENDIF(DO_QT4)
-IF(DO_CLI)
-    include(admCheckThreads)
-ENDIF(DO_CLI)
+include(admCheckThreads)
 
 # ---------- QT4 Version ----------------
 INCLUDE(vf_plugin_qt4)
@@ -29,5 +24,3 @@ IF (DO_CLI)
     ADM_LINK_THREAD(ADM_vf_imageStabCli)
 ENDIF (DO_CLI)
 #
-
-

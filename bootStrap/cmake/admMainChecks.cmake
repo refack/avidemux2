@@ -161,6 +161,7 @@ INCLUDE(avidemuxVersion)
 # # # # # # # # # ###############################
 SET(MSG_DISABLE_OPTION "Disabled per request")
 INCLUDE(admCheckRequiredLibs)
+INCLUDE(admCheckOptionalLibs)
 IF(NOT PLUGINS)
   checkMiscLibs()
 

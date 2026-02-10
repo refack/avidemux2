@@ -1,5 +1,3 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0 FATAL_ERROR)
-
 PROJECT(AdmAsfDemuxer)
 
 MESSAGE("#####################################")

@@ -75,11 +75,17 @@ bool ADM_ffQsvAV1Encoder::configureContext(void)
         case QSV_AV1_PROFILE_PRO:  SET_OPT("profile","pro"); break;
     }
 
+    char deviceBuf[32];
+    snprintf(deviceBuf,sizeof(deviceBuf),"%u",QsvAV1Settings.gpu_index);
+    SET_OPT("qsv_device",deviceBuf);
+    ADM_info("[ffQsvAV1] Selecting GPU index %u via qsv_device\n",QsvAV1Settings.gpu_index);
+
     return true;
 }
 
 bool ADM_ffQsvAV1Encoder::setup(void)
 {
+    ADM_info("[ffQsvAV1] Initializing av1_qsv encoder (gpu_index=%u)\n",QsvAV1Settings.gpu_index);
     if(false== ADM_coreVideoEncoderFFmpeg::setupByName("av1_qsv"))
     {
         ADM_info("[ffMpeg] Setup failed\n");
@@ -173,9 +179,11 @@ bool ffQsvAV1Configure(void)
     diaElemUInteger maxBitrate(PX(max_bitrate),QT_TRANSLATE_NOOP("ffQsvAV1","Max Bitrate (kbps):"),1,500000);
     diaElemUInteger gopSize(PX(gopsize),QT_TRANSLATE_NOOP("ffQsvAV1","GOP Size:"),0,1000);
     diaElemUInteger lookAhead(PX(lookahead),QT_TRANSLATE_NOOP("ffQsvAV1","Lookahead Depth:"),0,100);
+    diaElemUInteger gpuIndex(PX(gpu_index),QT_TRANSLATE_NOOP("ffQsvAV1","GPU index:"),0,16);
 
     diaElemFrame rateControl(QT_TRANSLATE_NOOP("ffQsvAV1","Rate Control"));
     diaElemFrame frameControl(QT_TRANSLATE_NOOP("ffQsvAV1","Frame Control"));
+    diaElemFrame deviceControl(QT_TRANSLATE_NOOP("ffQsvAV1","Device"));
 
     rateControl.swallow(&rcmode);
     rateControl.swallow(&preset);
@@ -192,10 +200,12 @@ bool ffQsvAV1Configure(void)
 
     frameControl.swallow(&gopSize);
     frameControl.swallow(&lookAhead);
+    deviceControl.swallow(&gpuIndex);
 
     diaElem *basics[]={
         &rateControl,
-        &frameControl
+        &frameControl,
+        &deviceControl
     };
 
 #define NB_ELEM(x) sizeof(x)/sizeof(diaElem *)

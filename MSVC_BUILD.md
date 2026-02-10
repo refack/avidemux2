@@ -143,6 +143,16 @@ If CMake complains about `FIND_PACKAGE(PThreads4W REQUIRED)`, you need to instal
 - Package name: `pthreads`
 - CMake usage: `find_package(PThreads4W REQUIRED)` (provided by vcpkg's wrapper)
 
+### Finding Qt6 Paths with VCPKG
+When using VCPKG, you don't need a separate `FindQt6.cmake`. The VCPKG toolchain file handles the integration.
+However, if you need to manually specify paths or debug, you can find the Qt6 installation in your VCPKG installed directory:
+`[VCPKG_ROOT]/installed/x64-windows/share/qt6`
+
+You can also set `Qt6_DIR` to this path in your CMake configuration if auto-detection fails, but usually, the toolchain file is sufficient.
+```cmd
+cmake .. -DQt6_DIR=%VCPKG_ROOT%/installed/x64-windows/share/qt6 ...
+```
+
 ### Debugging CMake Files
 To debug a `.cmake` file (like `admCheckQt6.cmake`), you can use `MESSAGE` commands to print variable values and execution flow.
 

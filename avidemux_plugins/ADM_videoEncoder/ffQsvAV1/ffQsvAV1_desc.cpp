@@ -8,5 +8,6 @@ extern const ADM_paramList ffqsvav1_encoder_param[]={
  {"max_bitrate",offsetof(ffqsvav1_encoder,max_bitrate),"uint32_t",ADM_param_uint32_t},
  {"gopsize",offsetof(ffqsvav1_encoder,gopsize),"uint32_t",ADM_param_uint32_t},
  {"lookahead",offsetof(ffqsvav1_encoder,lookahead),"uint32_t",ADM_param_uint32_t},
+ {"gpu_index",offsetof(ffqsvav1_encoder,gpu_index),"uint32_t",ADM_param_uint32_t},
 {NULL,0,NULL}
 };
